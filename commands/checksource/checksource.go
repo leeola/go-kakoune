@@ -43,6 +43,31 @@ func CheckSource(path string) ([]string, error) {
 	lines := strings.Split(stderr, "\n")
 
 	lenLines := len(lines)
+	// collapse any lines that are just details to the previous line.
+	// Eg, lines like:
+	//
+	// foo.go:75:4: cannot use x (type Foo) as Y in assignment:
+	//      Foo does not implement Y (missing Baz method)
+	//
+	// NOTE(leeola): index starts as 1, because we can't collapse
+	// the 0th line.
+	for i := 1; i < lenLines; i++ {
+		line := lines[i]
+		if !strings.HasPrefix(line, "\t") {
+			continue
+		}
+
+		prevI := i - 1
+		lines[prevI] = lines[prevI] + " " + strings.TrimPrefix(line, "\t")
+
+		// remove the collapsed element from the slice.
+		lines = append(lines[:i], lines[i+1:]...)
+		lenLines--
+
+		// make sure to bump the index number down by 1, since we modified
+		// the slice bounds.
+		i--
+	}
 
 	// the first and last line are not error reporting lines,
 	// so make sure we actually got some lines.
