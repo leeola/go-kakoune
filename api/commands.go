@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/leeola/go-kakoune/api/vars"
 )
 
 type Vars map[string]string
@@ -16,8 +18,8 @@ type Params []string
 type Command func(Params, Vars) error
 
 type DefineCommandOptions struct {
-	Params    int
-	Variables []string
+	Params int
+	Vars   []string
 }
 
 func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, f Command) error {
@@ -55,7 +57,7 @@ define-command -params %d %s %%{
   }
 }
 `, opts.Params, name,
-		opts.Variables,
+		opts.Vars,
 		name, argStr,
 	)
 
@@ -74,60 +76,6 @@ func (k *Kak) Command(name string, args ...string) {
 	k.Println(v...)
 }
 
-func (k *Kak) Echo(v ...interface{}) {
-	// TODO(leeola): figure out the fastest way to print the v...
-	// as if Sprintln did it, but WITHOUT the newline at the end.
-	//
-	// Apparently fmt.Sprint() and fmt.Sprintln() have different
-	// behavior, Sprint puts spaces between arguments only if they're
-	// not strings.. so i can't use Sprint() ...sadface.
-	s := fmt.Sprintln(v...)
-	l := len(s)
-	s = s[:l-1]
-	k.Printf("echo %q\n", s)
-}
-
-func (k *Kak) Echof(f string, v ...interface{}) {
-	k.Printf("echo %q\n", fmt.Sprintf(f, v...))
-}
-
-func (k *Kak) Fail(v ...interface{}) {
-	// TODO(leeola): figure out the fastest way to print the v...
-	// as if Sprintln did it, but WITHOUT the newline at the end.
-	//
-	// Apparently fmt.Sprint() and fmt.Sprintln() have different
-	// behavior, Sprint puts spaces between arguments only if they're
-	// not strings.. so i can't use Sprint() ...sadface.
-	s := fmt.Sprintln(v...)
-	l := len(s)
-	s = s[:l-1]
-	k.Printf("fail %q\n", s)
-}
-
-func (k *Kak) Failf(f string, v ...interface{}) {
-	k.Println("fail", fmt.Sprintf(f, v...))
-}
-
-// Print to the internal writer.
-//
-// This is a lower level interface, allowing you to send arbitrary
-// commands to Kakoune. Use with caution.
-func (k *Kak) Print(v ...interface{}) {
-	fmt.Fprint(k.writer, v...)
-}
-
-// Println to the internal writer.
-//
-// This is a lower level interface, allowing you to send arbitrary
-// commands to Kakoune. Use with caution.
-func (k *Kak) Println(v ...interface{}) {
-	fmt.Fprintln(k.writer, v...)
-}
-
-// Printf to the internal writer.
-//
-// This is a lower level interface, allowing you to send arbitrary
-// commands to Kakoune. Use with caution.
-func (k *Kak) Printf(f string, v ...interface{}) {
-	fmt.Fprintf(k.writer, f, v...)
+func (v Vars) Option(o string) string {
+	return v[vars.Option(o)]
 }
