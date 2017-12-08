@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -46,7 +45,7 @@ func main() {
 		for i, line := range errLines {
 			cols := strings.SplitN(line, ":", 4)
 			if len(cols) < 4 {
-				return errors.New("incorrectly formatted error line")
+				return fmt.Errorf("incorrectly formatted error line: %q", line)
 			}
 
 			// Block left for reference.
