@@ -2,6 +2,7 @@ package checksource
 
 import (
 	"errors"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,7 +23,14 @@ func CheckSource(path string) ([]string, error) {
 		return nil, err
 	}
 
-	_, stderr, exit, err := util.Exec("go", "build", packagePath)
+	tmpDir, err := ioutil.TempDir("", "go-kakoune")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	_, stderr, exit, err := util.Exec(
+		"go", "build", "-o", filepath.Join(tmpDir, "bin"), packagePath)
 	if err != nil {
 		return nil, err
 	}
