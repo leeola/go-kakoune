@@ -15,7 +15,7 @@ type Params []string
 // though. Concurrency doesn't *seem* likely to be used much, since
 // and Kakoune interaction will still be non-concurrent as it is entirely
 // over stdout.
-type Command func(Params, Vars) error
+type Command func(*Kak, Params, Vars) error
 
 type DefineCommandOptions struct {
 	Params int
@@ -31,7 +31,7 @@ func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, f Command) e
 		// Kakoune within the same process, so technically all of
 		// the memory of a single process should be owned by a single
 		// kak-command regardless.
-		if err := f(k.args, k.vars); err != nil {
+		if err := f(k, k.args, k.vars); err != nil {
 			k.Failf("go-kakoune: %s:", name, err.Error())
 		}
 

@@ -1,4 +1,4 @@
-package checksource
+package errorlines
 
 import (
 	"errors"
@@ -10,7 +10,11 @@ import (
 	"github.com/leeola/go-kakoune/util"
 )
 
-func CheckSource(path string) ([]string, error) {
+// GoBuild the given path and return any error lines
+//
+// Path will be resolved from the GOPATH, to use a package
+// directory.
+func GoBuild(path string) ([]string, error) {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return nil, errors.New("GOPATH not set")
