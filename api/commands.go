@@ -35,8 +35,8 @@ func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Command) 
     #
     # %s
 
-    kak-go-kakoune-plugins %q %d%s
-  }`, c.Vars, name, i, argStr))
+    %s %q %d%s
+  }`, c.Vars, k.bin, name, i, argStr))
 	}
 
 	// space omitted between %q%s on purpose,

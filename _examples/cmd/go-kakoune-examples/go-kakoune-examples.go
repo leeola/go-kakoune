@@ -8,12 +8,15 @@ import (
 func main() {
 	kak := api.New()
 
-	err := kak.DefineCommand("go-kakoune-hello",
+	err := kak.DefineCommand("gokakoune-hello",
 		api.DefineCommandOptions{}, _examples.Hello)
 	if err != nil {
 		panic(err)
 	}
 
-	kak.DefineCommand("go-kakoune-multicommand",
+	err = kak.DefineCommand("gokakoune-multicommand",
 		api.DefineCommandOptions{}, _examples.MultiCommand...)
+	if err != nil {
+		panic(err)
+	}
 }

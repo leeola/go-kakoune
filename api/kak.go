@@ -10,6 +10,7 @@ import (
 
 type Kak struct {
 	writer        io.Writer
+	bin           string
 	cmd           string
 	cmdBlockIndex int
 	args          []string
@@ -18,6 +19,7 @@ type Kak struct {
 
 func New() *Kak {
 	var (
+		bin           string
 		cmd           string
 		cmdBlockIndex int
 		args          []string
@@ -27,6 +29,10 @@ func New() *Kak {
 	// of init func? Because currently there is no way to inform
 	// the caller that an error occured.
 	lenArgs := len(os.Args)
+	if lenArgs >= 1 {
+		bin = os.Args[0]
+	}
+
 	if lenArgs >= 3 {
 		cmd = os.Args[1]
 
@@ -59,6 +65,7 @@ func New() *Kak {
 
 	return &Kak{
 		writer:        os.Stdout,
+		bin:           bin,
 		cmd:           cmd,
 		cmdBlockIndex: cmdBlockIndex,
 		args:          args,
