@@ -9,7 +9,7 @@ import (
 	"github.com/leeola/go-kakoune/errorlines"
 )
 
-var CompileCheck = []api.Command{
+var CompileCheck = []api.Subproc{
 	{
 		Vars: []string{
 			"kak_buffile",

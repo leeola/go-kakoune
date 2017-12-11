@@ -14,8 +14,8 @@ func main() {
 		panic(err)
 	}
 
-	err = kak.DefineCommand("gokakoune-multicommand",
-		api.DefineCommandOptions{}, _examples.MultiCommand...)
+	err = kak.DefineCommand("gokakoune-subprocs",
+		api.DefineCommandOptions{}, _examples.Subprocs...)
 	if err != nil {
 		panic(err)
 	}

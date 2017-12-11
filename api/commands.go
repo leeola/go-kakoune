@@ -9,7 +9,7 @@ type Vars map[string]string
 
 type Params []string
 
-type Command struct {
+type Subproc struct {
 	Vars []string
 	Func func(*Kak) error
 }
@@ -18,7 +18,7 @@ type DefineCommandOptions struct {
 	Params int
 }
 
-func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Command) error {
+func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Subproc) error {
 	var blockStrs []string
 	for i, c := range cs {
 		var argStr string
@@ -51,7 +51,7 @@ define-command -params %d %s %%{
 	return nil
 }
 
-func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Command) error {
+func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Subproc) error {
 	if k.cmdBlockIndex > len(cs) {
 		return fmt.Errorf("%s block unavailable: %d", name, k.cmdBlockIndex)
 	}
@@ -77,7 +77,7 @@ func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Command) e
 
 }
 
-func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, cs ...Command) error {
+func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, cs ...Subproc) error {
 	if k.cmd == "" {
 		return k.initCommand(name, opts, cs)
 	}

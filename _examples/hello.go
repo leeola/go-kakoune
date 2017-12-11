@@ -4,9 +4,9 @@ import (
 	"github.com/leeola/go-kakoune/api"
 )
 
-var Hello = api.Command{
+var Hello = api.Subproc{
 	Func: func(kak *api.Kak) error {
-		kak.Echo("hello")
+		kak.Echo("hello world")
 		return nil
 	},
 }

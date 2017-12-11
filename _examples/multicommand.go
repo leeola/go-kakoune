@@ -4,7 +4,7 @@ import (
 	"github.com/leeola/go-kakoune/api"
 )
 
-var MultiCommand = []api.Command{
+var Subprocs = []api.Subproc{
 	{
 		Func: func(kak *api.Kak) error {
 			// TODO(leeola): add a set option here,
