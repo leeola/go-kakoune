@@ -36,7 +36,9 @@ func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Subproc) 
     # %s
 
     %s %q %d%s
-  }`, c.Vars, k.bin, name, i, argStr))
+  }`,
+			c.Vars,
+			k.bin, name, i, argStr))
 	}
 
 	// space omitted between %q%s on purpose,
