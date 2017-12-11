@@ -5,10 +5,6 @@ import (
 	"strings"
 )
 
-type Vars map[string]string
-
-type Params []string
-
 type Subproc struct {
 	Vars []string
 	Func func(*Kak) error
