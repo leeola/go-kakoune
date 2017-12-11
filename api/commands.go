@@ -2,8 +2,7 @@ package api
 
 import (
 	"fmt"
-
-	"github.com/leeola/go-kakoune/api/vars"
+	"strings"
 )
 
 type Vars map[string]string
@@ -12,54 +11,82 @@ type Params []string
 
 type Command struct {
 	Vars []string
-	Func func(*Kak, Params, Vars) error
+	Func func(*Kak) error
 }
 
 type DefineCommandOptions struct {
 	Params int
-	Vars   []string
 }
 
-func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, c Command) error {
-	if k.cmd == name {
-		// NOTE(leeola): passing shared mutable references of the
-		// params and vars to the user should be acceptable here.
-		//
-		// This is because no two commands will ever be called from
-		// Kakoune within the same process, so technically all of
-		// the memory of a single process should be owned by a single
-		// kak-command regardless.
-		if err := c.Func(k, k.args, k.vars); err != nil {
-			k.Failf("go-kakoune: %s:", name, err.Error())
+func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Command) error {
+	var blockStrs []string
+	for i, c := range cs {
+		var argStr string
+		for i := 0; i < opts.Params; i++ {
+			// prefix each item with a space!
+			argStr += fmt.Sprintf(` "${%d}"`, i+1)
 		}
 
-		return nil
-	}
+		blockStrs = append(blockStrs, fmt.Sprintf(`
+  %%sh{
+    # the following variables are being written in the def source
+    # code to make Kakoune export them to this shell scope. By doing
+    # so, they become available to the Go source code.
+    #
+    # %s
 
-	var argStr string
-	for i := 0; i < opts.Params; i++ {
-		// prefix each item with a space!
-		argStr += fmt.Sprintf(` "${%d}"`, i+1)
+    kak-go-kakoune-plugins %q %d%s
+  }`, c.Vars, name, i, argStr))
 	}
 
 	// space omitted between %q%s on purpose,
 	// see above loop code format.
 	k.Printf(`
 define-command -params %d %s %%{
-  %%sh{
-
-    # included variables
-    # %s
-
-    kak-go-kakoune-plugins %q%s
-  }
+  %s
 }
-`, opts.Params, name,
-		opts.Vars,
-		name, argStr,
+`, opts.Params, name, strings.Join(blockStrs, "\n"),
 	)
 
 	return nil
+}
+
+func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Command) error {
+	if k.cmdBlockIndex > len(cs) {
+		return fmt.Errorf("%s block unavailable: %d", name, k.cmdBlockIndex)
+	}
+
+	c := cs[k.cmdBlockIndex]
+
+	// TODO(leeola): set the active command(s) so that we know what Vars[] should
+	// be available.
+	// k.activeCommands = c
+
+	// NOTE(leeola): passing shared mutable references of the
+	// params and vars to the user should be acceptable here.
+	//
+	// This is because no two commands will ever be called from
+	// Kakoune within the same process, so technically all of
+	// the memory of a single process should be owned by a single
+	// kak-command regardless.
+	if err := c.Func(k); err != nil {
+		k.Failf("go-kakoune: %s:", name, err.Error())
+	}
+
+	return nil
+
+}
+
+func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, cs ...Command) error {
+	if k.cmd == "" {
+		return k.initCommand(name, opts, cs)
+	}
+
+	if k.cmd != name {
+		return nil
+	}
+
+	return k.runCommand(name, opts, cs)
 }
 
 // Command calls a kakoune command directly.
@@ -72,8 +99,4 @@ func (k *Kak) Command(name string, args ...string) {
 		v[i+1] = fmt.Sprintf("%q", a)
 	}
 	k.Println(v...)
-}
-
-func (v Vars) Option(o string) string {
-	return v[vars.Option(o)]
 }

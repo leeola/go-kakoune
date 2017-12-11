@@ -4,34 +4,47 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 )
 
 type Kak struct {
-	writer io.Writer
-	cmd    string
-	args   []string
-	vars   map[string]string
+	writer        io.Writer
+	cmd           string
+	cmdBlockIndex int
+	args          []string
+	vars          map[string]string
 }
 
 func New() *Kak {
 	var (
-		cmd  string
-		args []string
+		cmd           string
+		cmdBlockIndex int
+		args          []string
 	)
 
-	switch l := len(os.Args); {
-	case l == 2:
+	// TODO(leeola): move this entire block of logic to some type
+	// of init func? Because currently there is no way to inform
+	// the caller that an error occured.
+	lenArgs := len(os.Args)
+	if lenArgs >= 3 {
 		cmd = os.Args[1]
-	case l >= 3:
-		cmd = os.Args[1]
+
+		cbi, err := strconv.Atoi(os.Args[2])
+		if err != nil {
+			panic(err)
+		}
+		cmdBlockIndex = cbi
+	}
+
+	if lenArgs >= 4 {
 		args = make([]string, len(os.Args[2:]))
 		copy(args, os.Args[2:])
 	}
 
 	vars := map[string]string{}
 	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "kak_") {
+		if strings.HasPrefix(env, var_prefix) {
 			kwargs := strings.SplitN(env, "=", 2)
 
 			// TODO(leeola): Possibly return an error here?
@@ -45,10 +58,11 @@ func New() *Kak {
 	}
 
 	return &Kak{
-		writer: os.Stdout,
-		cmd:    cmd,
-		args:   args,
-		vars:   vars,
+		writer:        os.Stdout,
+		cmd:           cmd,
+		cmdBlockIndex: cmdBlockIndex,
+		args:          args,
+		vars:          vars,
 	}
 }
 

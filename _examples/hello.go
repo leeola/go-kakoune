@@ -5,7 +5,7 @@ import (
 )
 
 var Hello = api.Command{
-	Func: func(kak *api.Kak, p api.Params, v api.Vars) error {
+	Func: func(kak *api.Kak) error {
 		kak.Echo("hello")
 		return nil
 	},
