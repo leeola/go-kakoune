@@ -72,7 +72,7 @@ func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Subproc) e
 	// the memory of a single process should be owned by a single
 	// kak-command regardless.
 	if err := c.Func(k); err != nil {
-		k.Failf("go-kakoune: %s:", name, err.Error())
+		k.Failf("gokakoune: %s: %s", name, err.Error())
 	}
 
 	return nil
