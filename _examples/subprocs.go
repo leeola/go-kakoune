@@ -1,7 +1,7 @@
 package _examples
 
 import (
-	"github.com/leeola/go-kakoune/api"
+	"github.com/leeola/gokakoune/api"
 )
 
 var Subprocs = []api.Subproc{

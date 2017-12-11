@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/leeola/go-kakoune/api"
-	"github.com/leeola/go-kakoune/plugins/compilecheck"
+	"github.com/leeola/gokakoune/api"
+	"github.com/leeola/gokakoune/plugins/compilecheck"
 )
 
 func main() {

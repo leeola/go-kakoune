@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/leeola/go-kakoune/util"
+	"github.com/leeola/gokakoune/util"
 )
 
 // GoBuild the given path and return any error lines
@@ -27,7 +27,7 @@ func GoBuild(path string) ([]string, error) {
 		return nil, err
 	}
 
-	tmpDir, err := ioutil.TempDir("", "go-kakoune")
+	tmpDir, err := ioutil.TempDir("", "gokakoune")
 	if err != nil {
 		return nil, err
 	}

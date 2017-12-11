@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/leeola/go-kakoune/api"
-	"github.com/leeola/go-kakoune/errorlines"
+	"github.com/leeola/gokakoune/api"
+	"github.com/leeola/gokakoune/errorlines"
 )
 
 var CompileCheck = []api.Subproc{
