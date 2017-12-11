@@ -10,19 +10,17 @@ type Vars map[string]string
 
 type Params []string
 
-// TODO(leeola): a concurrent Kak param might be needed to safely
-// define logic blocks with concurrent code. Hard to say at this time
-// though. Concurrency doesn't *seem* likely to be used much, since
-// and Kakoune interaction will still be non-concurrent as it is entirely
-// over stdout.
-type Command func(*Kak, Params, Vars) error
+type Command struct {
+	Vars []string
+	Func func(*Kak, Params, Vars) error
+}
 
 type DefineCommandOptions struct {
 	Params int
 	Vars   []string
 }
 
-func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, f Command) error {
+func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, c Command) error {
 	if k.cmd == name {
 		// NOTE(leeola): passing shared mutable references of the
 		// params and vars to the user should be acceptable here.
@@ -31,7 +29,7 @@ func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, f Command) e
 		// Kakoune within the same process, so technically all of
 		// the memory of a single process should be owned by a single
 		// kak-command regardless.
-		if err := f(k, k.args, k.vars); err != nil {
+		if err := c.Func(k, k.args, k.vars); err != nil {
 			k.Failf("go-kakoune: %s:", name, err.Error())
 		}
 
