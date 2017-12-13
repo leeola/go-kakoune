@@ -12,7 +12,7 @@ import (
 
 var CompileCheck = []api.Subproc{
 	{
-		Vars: []string{
+		ExportVars: []string{
 			vars.BufFile,
 		},
 		Func: func(kak *api.Kak) error {

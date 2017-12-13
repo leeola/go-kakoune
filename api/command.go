@@ -5,8 +5,43 @@ import (
 	"strings"
 )
 
+// Subproc executes Go code in a subproc of Kakoune.
+//
+// Each Subproc is effectively the same as the %sh{ .. } block found within
+// a define-command command. Example:
+//
+//    define-command cmdName %{
+//      %sh{
+//        # do stuff in shell scope.
+//      }
+//    }
+//
+// The Subproc.Func is called from the shell expansion in the above example.
 type Subproc struct {
-	Vars []string
+	// ExportVars specifies the variables that Kakoune should export to the Subproc.
+	//
+	// Eg, if `[]string{"buffile"}` is the value of ExportVars, then the
+	// environment variable `kak_buffile` will be exported to your subproc.
+	// Retrieval of this variable can be done with `kak.Var("buffile")`,
+	// also without the kak_ prefix.  All gokakoune functions will properly
+	// prefix kak_ and kak_opt_ as needed.
+	//
+	// NOTE: these are not prefixed with `kak_`. Eg, to export `bufname` to a
+	// subproc just specify the following, *without* the `kak_` prefix:
+	//
+	//    ExportVars: []string{"bufname"}
+	//
+	// Constants in the api/vars package are also available.
+	ExportVars []string
+
+	// Func is called within each subprocess specified in Kak.DefineCommand.
+	//
+	// It's important to understand that the function execution defines the
+	// lifetime of the Kakoune command. Memory cannot be shared between
+	// Subproc executions.
+	//
+	// To share memory/state between Func calls, set options within Kakoune
+	// and retrieve them on future subprocs.
 	Func func(*Kak) error
 }
 
@@ -23,8 +58,8 @@ func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Subproc) 
 			argStr += fmt.Sprintf(` "${%d}"`, i+1)
 		}
 
-		vars := make([]string, len(c.Vars))
-		for i, v := range c.Vars {
+		vars := make([]string, len(c.ExportVars))
+		for i, v := range c.ExportVars {
 			vars[i] = "$kak_" + v
 		}
 
