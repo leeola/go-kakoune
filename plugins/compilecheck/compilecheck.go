@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"github.com/leeola/gokakoune/api"
+	"github.com/leeola/gokakoune/api/vars"
 	"github.com/leeola/gokakoune/errorlines"
 )
 
 var CompileCheck = []api.Subproc{
 	{
 		Vars: []string{
-			"kak_buffile",
+			vars.BufFile,
 		},
 		Func: func(kak *api.Kak) error {
 			buffile, err := kak.Var("buffile")

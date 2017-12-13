@@ -23,17 +23,26 @@ func (k *Kak) initCommand(name string, opts DefineCommandOptions, cs []Subproc) 
 			argStr += fmt.Sprintf(` "${%d}"`, i+1)
 		}
 
+		vars := make([]string, len(c.Vars))
+		for i, v := range c.Vars {
+			vars[i] = "$kak_" + v
+		}
+
 		blockStrs = append(blockStrs, fmt.Sprintf(`
   %%sh{
     # the following variables are being written in the def source
     # code to make Kakoune export them to this shell scope. By doing
     # so, they become available to the Go source code.
     #
+    # Note that it appears Kakoune just uses regex on the codeblock,
+    # so the fact that the variables are commented out does not matter.
+    # It loads any kak variables specified in the code.
+    #
     # %s
 
     %s %q %d%s
   }`,
-			c.Vars,
+			vars,
 			k.bin, name, i, argStr))
 	}
 
