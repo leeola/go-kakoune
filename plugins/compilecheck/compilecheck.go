@@ -21,7 +21,7 @@ var CompileCheckSubprocs = []api.Subproc{
 				return err
 			}
 
-			errLines, err := errorlines.GoBuild(buffile)
+			errLines, err := errorlines.GoTest(buffile)
 			if err != nil {
 				return err
 			}
