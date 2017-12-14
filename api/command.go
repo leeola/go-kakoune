@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"strings"
+
+	"github.com/leeola/gokakoune/util"
 )
 
 // Subproc executes Go code in a subproc of Kakoune.
@@ -136,9 +138,17 @@ func (k *Kak) Command(name string, args ...string) {
 	v := make([]interface{}, len(args)+1)
 	v[0] = name
 	for i, a := range args {
-		// using %q to escape and quote the variable, to ensure that each
-		// argument given to Command is an argument in the chosen command.
-		v[i+1] = fmt.Sprintf("%q", a)
+		// EscapeRune ensures that the double quote is escaped, but nothing
+		// else.
+		//
+		// This is because kakoune seems to have non-intuitive behavior with
+		// escaping. If we use something like `Sprintf("%q", a)`, newlines
+		// will be escaped in kakoune as well. We have to not escape newlines,
+		// but do escape the surrounding quotes to ensure it is read as a
+		// single argument.
+		//
+		// This feels a bit hacky, but i've not found a better way yet.
+		v[i+1] = fmt.Sprintf("\"%s\"", util.EscapeRune(a, '"'))
 	}
 	k.Println(v...)
 }
