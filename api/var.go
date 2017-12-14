@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+)
 
 const (
 	var_prefix = "kak_"
@@ -24,6 +27,24 @@ func (k *Kak) Var(key string) (string, error) {
 	}
 
 	return v, nil
+}
+
+func (k *Kak) VarInt(key string) (int, error) {
+	v, ok := k.vars[var_prefix+key]
+	if !ok {
+		// TODO(leeola): check the current commands to see if the given var
+		// was even specified, so a more informative error can be returned to
+		// the user.
+
+		return 0, fmt.Errorf("var not available: %q", key)
+	}
+
+	i, err := strconv.Atoi(v)
+	if err != nil {
+		return 0, err
+	}
+
+	return i, nil
 }
 
 func (k *Kak) Arg(i int) (string, error) {
