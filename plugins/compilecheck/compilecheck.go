@@ -10,7 +10,7 @@ import (
 	"github.com/leeola/gokakoune/errorlines"
 )
 
-var CompileCheck = []api.Subproc{
+var CompileCheckSubprocs = []api.Subproc{
 	{
 		ExportVars: []string{
 			vars.BufFile,
