@@ -18,4 +18,7 @@ func main() {
 
 	opts = api.DefineCommandOptions{}
 	kak.DefineCommand("gokakoune-show-doc", opts, showdoc.ShowDocSubprocs...)
+
+	//opts = api.DefineCommandOptions{}
+	//kak.DefineCommand("gokakoune-rename", opts, rename.RenameSubprocs...)
 }
