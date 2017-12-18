@@ -121,9 +121,15 @@ func (k *Kak) runCommand(name string, opts DefineCommandOptions, cs []Subproc) e
 
 }
 
-func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, cs ...Subproc) error {
+func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, exps ...Expansion) error {
+	dc := DefineCommand{
+		Options:    opts,
+		Expansions: exps,
+	}
+
+	// if the name matches, init it.
 	if k.cmd == "" {
-		return k.initCommand(name, opts, cs)
+		return dc.Init(k)
 	}
 
 	if k.cmd != name {

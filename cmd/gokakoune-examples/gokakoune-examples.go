@@ -19,4 +19,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// err = kak.DefineCommand("gokakoune-subproc-nesting",
+	// 	api.DefineCommandOptions{}, _examples.SubprocNesting...)
+	// if err != nil {
+	// 	panic(err)
+	// }
 }
