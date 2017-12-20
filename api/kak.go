@@ -9,20 +9,41 @@ import (
 )
 
 type Kak struct {
-	writer        io.Writer
-	bin           string
-	cmd           string
-	cmdBlockIndex int
-	args          []string
-	vars          map[string]string
+	writer io.Writer
+
+	// gokakouneInit
+	gokakouneInit bool
+
+	// gokakouneBin is the name of the binary using this API, being called by
+	// kakoune itself.
+	gokakouneBin string
+
+	funcArgs []string
+	funcVars map[string]string
+
+	// expansionID is passed in after the gokakouneBin and indicates a
+	// func block to execute.
+	expansionID    int
+	expansionCount int
+
+	// funcCalled will be true if a func was already called for this process.
+	// If true, every action on Kakoune becomes a noop. This is because if
+	// the func was already called, there is no other action that this
+	// instance of gokakoune needs to do.
+	//
+	// NOTE(leeola): there is no goroutine locking/protection on this var.
+	// This may be added in the future, but currently it isn't likely to
+	// matter.
+	funcCalled bool
 }
 
 func New() *Kak {
 	var (
-		bin           string
-		cmd           string
-		cmdBlockIndex int
-		args          []string
+		notGokakouneInit bool
+		gokakouneBin     string
+		funcID           int
+		funcArgs         []string
+		funcVars         = map[string]string{}
 	)
 
 	// TODO(leeola): move this entire block of logic to some type
@@ -30,25 +51,25 @@ func New() *Kak {
 	// the caller that an error occured.
 	lenArgs := len(os.Args)
 	if lenArgs >= 1 {
-		bin = os.Args[0]
+		gokakouneBin = os.Args[0]
+	} else {
+		panic("cannot get plugin executable")
+	}
+
+	if lenArgs >= 2 {
+		id, err := strconv.Atoi(os.Args[1])
+		if err != nil {
+			panic("expansionID is not valid int")
+		}
+		funcID = id
+		notGokakouneInit = true
 	}
 
 	if lenArgs >= 3 {
-		cmd = os.Args[1]
-
-		cbi, err := strconv.Atoi(os.Args[2])
-		if err != nil {
-			panic(err)
-		}
-		cmdBlockIndex = cbi
+		funcArgs = make([]string, len(os.Args[2:]))
+		copy(funcArgs, os.Args[2:])
 	}
 
-	if lenArgs >= 4 {
-		args = make([]string, len(os.Args[2:]))
-		copy(args, os.Args[2:])
-	}
-
-	vars := map[string]string{}
 	for _, env := range os.Environ() {
 		if strings.HasPrefix(env, var_prefix) {
 			kwargs := strings.SplitN(env, "=", 2)
@@ -59,17 +80,17 @@ func New() *Kak {
 				continue
 			}
 
-			vars[kwargs[0]] = kwargs[1]
+			funcVars[kwargs[0]] = kwargs[1]
 		}
 	}
 
 	return &Kak{
 		writer:        os.Stdout,
-		bin:           bin,
-		cmd:           cmd,
-		cmdBlockIndex: cmdBlockIndex,
-		args:          args,
-		vars:          vars,
+		gokakouneBin:  gokakouneBin,
+		gokakouneInit: !notGokakouneInit,
+		expansionID:   funcID,
+		funcArgs:      funcArgs,
+		funcVars:      funcVars,
 	}
 }
 

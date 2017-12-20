@@ -17,7 +17,7 @@ func (k *Kak) Option(key string) (string, error) {
 }
 
 func (k *Kak) Var(key string) (string, error) {
-	v, ok := k.vars[var_prefix+key]
+	v, ok := k.funcVars[var_prefix+key]
 	if !ok {
 		// TODO(leeola): check the current commands to see if the given var
 		// was even specified, so a more informative error can be returned to
@@ -30,7 +30,7 @@ func (k *Kak) Var(key string) (string, error) {
 }
 
 func (k *Kak) VarInt(key string) (int, error) {
-	v, ok := k.vars[var_prefix+key]
+	v, ok := k.funcVars[var_prefix+key]
 	if !ok {
 		// TODO(leeola): check the current commands to see if the given var
 		// was even specified, so a more informative error can be returned to
@@ -48,9 +48,9 @@ func (k *Kak) VarInt(key string) (int, error) {
 }
 
 func (k *Kak) Arg(i int) (string, error) {
-	if i > len(k.args) {
+	if i > len(k.funcArgs) {
 		return "", fmt.Errorf("argument not given: %d", i)
 	}
 
-	return k.args[i], nil
+	return k.funcArgs[i], nil
 }
