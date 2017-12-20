@@ -13,8 +13,8 @@ const (
 	gogetdocBin = "gogetdoc"
 )
 
-var ShowDocSubprocs = []api.Subproc{
-	{
+var ShowDocSubprocs = api.Expansions{
+	api.Func{
 		ExportVars: []string{
 			vars.BufName,
 			vars.CursorByteOffset,
