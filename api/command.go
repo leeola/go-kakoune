@@ -206,7 +206,20 @@ func (k *Kak) runExpansion(exp Expansion) error {
 		return fmt.Errorf("not runnable expansion: %d", expansionCount)
 	}
 
-	return runnable.Run(k)
+	// NOTE(leeola): this behavior of consuming the error and printing
+	// it to the user is debatable. My thought process though is that
+	// gokakoune isn't failing, so the main k.Expansion() or k.DefineCommand()
+	// API shouldn't be failing. The user command is failing, but that's
+	// on their side.
+	//
+	// This differs from the error above, where an expansion is not runnable,
+	// that's clearly related to a gokakoune error.
+	if err := runnable.Run(k); err != nil {
+		// report the error to the user
+		k.Fail(err)
+	}
+
+	return nil
 }
 
 func (k *Kak) initExpansion(exp Expansion) (string, error) {
