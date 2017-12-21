@@ -4,6 +4,7 @@ import (
 	"github.com/leeola/gokakoune/api"
 	"github.com/leeola/gokakoune/plugins/compilecheck"
 	"github.com/leeola/gokakoune/plugins/jumpdef"
+	"github.com/leeola/gokakoune/plugins/rename"
 	"github.com/leeola/gokakoune/plugins/showdoc"
 )
 
@@ -19,6 +20,6 @@ func main() {
 	opts = api.DefineCommandOptions{}
 	kak.DefineCommand("gokakoune-show-doc", opts, showdoc.ShowDocSubprocs...)
 
-	//opts = api.DefineCommandOptions{}
-	//kak.DefineCommand("gokakoune-rename", opts, rename.RenameSubprocs...)
+	opts = api.DefineCommandOptions{}
+	kak.DefineCommand("gokakoune-rename", opts, rename.RenameSubprocs...)
 }
