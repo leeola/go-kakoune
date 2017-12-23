@@ -13,7 +13,7 @@ import (
 // NOTE(leeola): this has plenty of limitations in implementation,
 // improvements coming in the near future. this is just a hack.
 // Eg, proper error handling, buffer saving, etc.
-var JumpDefSubprocs = api.Expansions{
+var JumpDefExpressions = api.Expansions{
 	api.Func{
 		ExportVars: []string{
 			vars.BufName,

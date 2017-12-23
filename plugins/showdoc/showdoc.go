@@ -13,7 +13,7 @@ const (
 	gogetdocBin = "gogetdoc"
 )
 
-var ShowDocSubprocs = api.Expansions{
+var ShowDocExpressions = api.Expansions{
 	api.Func{
 		ExportVars: []string{
 			vars.BufName,

@@ -14,7 +14,7 @@ const (
 	gorenameBin = "gorename"
 )
 
-var RenameSubprocs = api.Expansions{
+var RenameExpressions = api.Expansions{
 	api.Prompt{
 		Text: "rename: ",
 		Expansions: api.Expansions{
