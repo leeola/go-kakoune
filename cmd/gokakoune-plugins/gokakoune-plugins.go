@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/leeola/gokakoune/api"
 	"github.com/leeola/gokakoune/plugins/compilecheck"
+	"github.com/leeola/gokakoune/plugins/errsig"
 	"github.com/leeola/gokakoune/plugins/jumpdef"
 	"github.com/leeola/gokakoune/plugins/rename"
 	"github.com/leeola/gokakoune/plugins/showdoc"
@@ -22,4 +23,7 @@ func main() {
 
 	opts = api.DefineCommandOptions{}
 	kak.DefineCommand("gokakoune-rename", opts, rename.RenameExpressions...)
+
+	opts = api.DefineCommandOptions{}
+	kak.DefineCommand("gokakoune-errsig", opts, errsig.ErrSigExpressions...)
 }
