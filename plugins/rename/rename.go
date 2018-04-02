@@ -40,7 +40,7 @@ var RenameExpressions = api.Expansions{
 						return err
 					}
 
-					stdout, _, exit, err := util.Exec(gorenameBin,
+					stdout, stderr, exit, err := util.Exec(gorenameBin,
 						"-offset", fmt.Sprintf("%s:#%s", buffile, cursorByteOffset),
 						"-to", text)
 					if err != nil {
@@ -50,6 +50,7 @@ var RenameExpressions = api.Expansions{
 					// TODO(leeola): hook into a compile checker, to try and report
 					// bad syntax, if possible.
 					if exit != 0 {
+						kak.Debugf("error: %q", stderr)
 						return errors.New("bad exit, not compile checking yet...")
 					}
 
