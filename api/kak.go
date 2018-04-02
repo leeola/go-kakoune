@@ -94,6 +94,23 @@ func New() *Kak {
 	}
 }
 
+func (k *Kak) Debug(v ...interface{}) {
+	// TODO(leeola): figure out the fastest way to print the v...
+	// as if Sprintln did it, but WITHOUT the newline at the end.
+	//
+	// Apparently fmt.Sprint() and fmt.Sprintln() have different
+	// behavior, Sprint puts spaces between arguments only if they're
+	// not strings.. so i can't use Sprint() ...sadface.
+	s := fmt.Sprintln(v...)
+	l := len(s)
+	s = s[:l-1]
+	k.Printf("echo -debug %q\n", s)
+}
+
+func (k *Kak) Debugf(f string, v ...interface{}) {
+	k.Printf("echo -debug %q\n", fmt.Sprintf(f, v...))
+}
+
 func (k *Kak) Echo(v ...interface{}) {
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
