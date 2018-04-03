@@ -2,6 +2,7 @@ package errorlines
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,39 +46,44 @@ func GoTest(path string) ([]string, error) {
 	}
 
 	lines := strings.Split(stderr, "\n")
+	return cleanErrLines(lines), nil
+}
 
-	lenLines := len(lines)
-	// collapse any lines that are just details to the previous line.
-	// Eg, lines like:
-	//
-	// foo.go:75:4: cannot use x (type Foo) as Y in assignment:
-	//      Foo does not implement Y (missing Baz method)
-	//
-	// NOTE(leeola): index starts as 1, because we can't collapse
-	// the 0th line.
-	for i := 1; i < lenLines; i++ {
-		line := lines[i]
-		if !strings.HasPrefix(line, "\t") {
+// cleanErrLines cleans an go test stderr response to output one string per
+// error line.
+//
+// foo.go:75:4: cannot use x (type Foo) as Y in assignment:
+//      Foo does not implement Y (missing Baz method)
+//
+// See func test for more expected input.
+func cleanErrLines(src []string) []string {
+	var (
+		dst      []string
+		strBuild string
+	)
+
+	for _, s := range src {
+		if s == "" {
 			continue
 		}
 
-		prevI := i - 1
-		lines[prevI] = lines[prevI] + " " + strings.TrimPrefix(line, "\t")
+		// ignore all lines that start with a #, they're just package grouping
+		// descriptions.
+		if strings.HasPrefix(s, "#") {
+			continue
+		}
 
-		// remove the collapsed element from the slice.
-		lines = append(lines[:i], lines[i+1:]...)
-		lenLines--
+		if strings.HasPrefix(s, "\t") {
+			strBuild = fmt.Sprintf("%s %s", strBuild, strings.TrimPrefix(s, "\t"))
+			continue
+		}
 
-		// make sure to bump the index number down by 1, since we modified
-		// the slice bounds.
-		i--
+		if strBuild != "" {
+			dst = append(dst, strBuild)
+		}
+
+		strBuild = s
 	}
 
-	// the first and last line are not error reporting lines,
-	// so make sure we actually got some lines.
-	if lenLines <= 2 {
-		return nil, errors.New("unexpected go build response")
-	}
-
-	return lines[1 : lenLines-1], nil
+	return append(dst, strBuild)
 }
