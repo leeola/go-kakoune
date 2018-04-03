@@ -34,6 +34,7 @@ var CompileCheckExpressions = api.Expansions{
 			}
 
 			var (
+				first_file       string
 				first_line       string
 				first_desc       string
 				code_errors_line = []string{fmt.Sprintf("%d", time.Now().Unix())}
@@ -52,6 +53,7 @@ var CompileCheckExpressions = api.Expansions{
 				// desc := cols[3]
 
 				if i == 0 {
+					first_file = cols[0]
 					first_line = lineNo
 					first_desc = cols[3]
 				}
@@ -63,6 +65,7 @@ var CompileCheckExpressions = api.Expansions{
 			// is just assuming the same file, but that's faulty.
 
 			// TODO(leeola): make all these commands native Go commands.
+			kak.Command("set-option", "buffer", "code_err_file", first_file)
 			kak.Command("set-option", "buffer", "code_err_line", first_line)
 			kak.Command("set-option", "buffer", "code_err_desc", first_desc)
 			kak.Command("echo", "-markup", "{red,default}", first_desc)
