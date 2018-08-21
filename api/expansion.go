@@ -87,7 +87,7 @@ func (e Func) Init(ctx Context) (string, error) {
 	}
 
 	return fmt.Sprintf(`
-  %%sh{
+  evaluate-commands %%sh{
     # the following variables are being written in the def source
     # code to make Kakoune export them to this shell scope. By doing
     # so, they become available to the Go source code.
