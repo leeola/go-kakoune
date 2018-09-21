@@ -29,7 +29,7 @@ var CompileCheckExpressions = api.Expansions{
 			// if there are no lines, clear the err output
 			if len(errLines) == 0 {
 				kak.Command("set-option", "buffer", "code_err", "false")
-				kak.Command("remove-highlighter", "window/hlflags_code_errors")
+				kak.Command("remove-highlighter", "window/flag-lines_default_code_errors")
 				return nil
 			}
 
@@ -37,7 +37,7 @@ var CompileCheckExpressions = api.Expansions{
 				first_file       string
 				first_line       string
 				first_desc       string
-				code_errors_line = []string{fmt.Sprintf("%d", time.Now().Unix())}
+				code_errors_line []interface{}
 			)
 
 			for i, line := range errLines {
@@ -68,14 +68,13 @@ var CompileCheckExpressions = api.Expansions{
 			kak.Command("set-option", "buffer", "code_err_file", first_file)
 			kak.Command("set-option", "buffer", "code_err_line", first_line)
 			kak.Command("set-option", "buffer", "code_err_desc", first_desc)
-			kak.Command("echo", "-markup", "{red,default}", first_desc)
 
 			// Clear previously assigned hightlighter. Otherwise kak fails.
-			kak.Command("remove-highlighter", "window/hlflags_code_errors")
+			kak.Command("remove-highlighter", "window/flag-lines_default_code_errors")
 
-			kak.Command("add-highlighter", "window/", "flag_lines", "default", "code_errors")
+			kak.Command("add-highlighter", "window/", "flag-lines", "default", "code_errors")
 			kak.Command("set-option", "buffer", "code_err", "true")
-			kak.Command("set-option", "global", "code_errors", strings.Join(code_errors_line, ":"))
+			kak.Command("set-option", append([]interface{}{"global", "code_errors", time.Now().Unix()}, code_errors_line...)...)
 
 			return nil
 		},
