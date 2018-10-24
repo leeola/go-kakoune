@@ -101,11 +101,6 @@ func (k *Kak) Debug(v ...interface{}) {
 	// Apparently fmt.Sprint() and fmt.Sprintln() have different
 	// behavior, Sprint puts spaces between arguments only if they're
 	// not strings.. so i can't use Sprint() ...sadface.
-	// s := fmt.Sprintln(v...)
-	// l := len(s)
-	// s = s[:l-1]
-	// k.Printf("echo -debug %q\n", s)
-	v = append([]interface{}{"echo -debug"}, v...)
 	s := Escape(v...)
 	k.Println("echo", "-debug", s)
 }

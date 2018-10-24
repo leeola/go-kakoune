@@ -43,6 +43,7 @@ var ShowDocExpressions = api.Expansions{
 			}
 
 			if exit != 0 {
+				kak.Debugf(gogetdocBin, "output:", stdout)
 				return fmt.Errorf("unexpected %s exit code: %d", gogetdocBin, exit)
 			}
 
