@@ -59,12 +59,6 @@ func (exp Expansion) Expand(k Kak) error {
 }
 
 func (exp Callback) Expand(k Kak) error {
-	// TODO(leeola): this should be moved into the wrapper. Eg, if a wrapper
-	// wraps a shell, it prefixes it with the `evaluate-commands` call.
-	//
-	// This inclusion here is just a bit of a hack.
-	k.Print("evaluate-commands ")
-
 	return (Sh{
 		ExportVars: exp.ExportVars,
 		Body: func(k Kak) error {

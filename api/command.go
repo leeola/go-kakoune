@@ -129,7 +129,7 @@ func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exp Expander)
 	}
 
 	// temp using empty context
-	if err := wrapExpansion(exp).Expand(k); err != nil {
+	if err := wrapSh(exp).Expand(k); err != nil {
 		return fmt.Errorf("expansion expand: %v", err)
 	}
 
@@ -173,22 +173,40 @@ func (k Kak) Prompt(promptMsg string, exp Expander) error {
 		return fmt.Errorf("fprintf cmd start: %v", err)
 	}
 
-	return wrapExpansion(exp).Expand(k)
+	return wrapSh(exp).Expand(k)
 }
 
-// wrapExpansion ensures that an expansion block used will be wrapped
+func (k Kak) EvaluateCommands(exp Expander) error {
+	_, err := fmt.Fprint(k.writer, "evaluate-commands ")
+	if err != nil {
+		return fmt.Errorf("fprintf eval: %v", err)
+	}
+
+	// do not wrap Sh. It doesn't need it, and will endlessly loop if you do ;)
+	return exp.Expand(k)
+}
+
+// wrapSh ensures that a shell expansion will be wrapped
 // by a plain %{} expansion.
 //
-//  Eg, %sh{} would become %{ %sh{} }. The function will not needlessly
+// Eg, %sh{} would become %{ eval %sh{} }. The function will not needlessly
 // wrap a plain Expansion. Ie %{} does not become %{ %{} }.
-func wrapExpansion(unwrapped Expander) Expander {
-	exp := unwrapped
-	if _, ok := unwrapped.(Expansion); !ok {
+//
+// This was done because it was seen that %sh{} blocks used without being
+// inside of a %{} expansion would not get access to $kak_bufname style
+// vars, which Gokakoune depends upon for callback usage.
+func wrapSh(exp Expander) Expander {
+	switch v := exp.(type) {
+	case Callback, Sh:
 		exp = Expansion{
 			Body: func(k Kak) error {
-				return unwrapped.Expand(k)
+				return k.EvaluateCommands(v)
 			},
 		}
+	default:
+		// do nothing if it's an Expansion, or other type.
+		// Other is allowed, as we assume it doesn't need
+		// special treatment like callback or sh.
 	}
 
 	return exp
