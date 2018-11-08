@@ -11,39 +11,44 @@ import (
 type Kak struct {
 	writer io.Writer
 
-	// gokakouneInit
-	gokakouneInit bool
-
 	// gokakouneBin is the name of the binary using this API, being called by
 	// kakoune itself.
 	gokakouneBin string
 
-	funcArgs []string
-	funcVars map[string]string
+	isCallback   bool
+	callbackName string
+	callbackArgs []string
+	callbackVars map[string]string
 
-	// expansionID is passed in after the gokakouneBin and indicates a
-	// func block to execute.
-	expansionID    int
-	expansionCount int
-
-	// funcCalled will be true if a func was already called for this process.
-	// If true, every action on Kakoune becomes a noop. This is because if
-	// the func was already called, there is no other action that this
-	// instance of gokakoune needs to do.
-	//
-	// NOTE(leeola): there is no goroutine locking/protection on this var.
-	// This may be added in the future, but currently it isn't likely to
-	// matter.
-	funcCalled bool
+	isNop bool
 }
 
-func New() *Kak {
+type KakInit struct {
+	Kak
+
+	// callbackCount is used to create a name for callbacks without a name.
+	callbackCount int
+}
+
+// New returns a new instance of Kakoune, using os.Args and os.Environ,
+// and panics of any error is encountered.
+//
+// For a safe alternative, use NewSafe()
+func New() *KakInit {
+	k, err := NewSafe(os.Stdout, os.Args, os.Environ())
+	if err != nil {
+		panic(fmt.Sprintf("gokakoune new: %v", err))
+	}
+	return k
+}
+
+func NewSafe(w io.Writer, args, envs []string) (*KakInit, error) {
 	var (
-		notGokakouneInit bool
-		gokakouneBin     string
-		funcID           int
-		funcArgs         []string
-		funcVars         = map[string]string{}
+		isCallback   bool
+		gokakouneBin string
+		callbackName string
+		callbackArgs []string
+		callbackVars = map[string]string{}
 	)
 
 	// TODO(leeola): move this entire block of logic to some type
@@ -53,24 +58,20 @@ func New() *Kak {
 	if lenArgs >= 1 {
 		gokakouneBin = os.Args[0]
 	} else {
-		panic("cannot get plugin executable")
+		return nil, fmt.Errorf("cannot get gokakoune executable")
 	}
 
 	if lenArgs >= 2 {
-		id, err := strconv.Atoi(os.Args[1])
-		if err != nil {
-			panic("expansionID is not valid int")
-		}
-		funcID = id
-		notGokakouneInit = true
+		callbackName = os.Args[1]
+		isCallback = true
 	}
 
 	if lenArgs >= 3 {
-		funcArgs = make([]string, len(os.Args[2:]))
-		copy(funcArgs, os.Args[2:])
+		callbackArgs = make([]string, len(os.Args[2:]))
+		copy(callbackArgs, os.Args[2:])
 	}
 
-	for _, env := range os.Environ() {
+	for _, env := range envs {
 		if strings.HasPrefix(env, var_prefix) {
 			kwargs := strings.SplitN(env, "=", 2)
 
@@ -80,21 +81,60 @@ func New() *Kak {
 				continue
 			}
 
-			funcVars[kwargs[0]] = kwargs[1]
+			callbackVars[kwargs[0]] = kwargs[1]
 		}
 	}
 
-	return &Kak{
-		writer:        os.Stdout,
-		gokakouneBin:  gokakouneBin,
-		gokakouneInit: !notGokakouneInit,
-		expansionID:   funcID,
-		funcArgs:      funcArgs,
-		funcVars:      funcVars,
+	return &KakInit{
+		Kak: Kak{
+			writer:       w,
+			gokakouneBin: gokakouneBin,
+			isCallback:   isCallback,
+			isNop:        isCallback,
+			callbackName: callbackName,
+			callbackArgs: callbackArgs,
+			callbackVars: callbackVars,
+		},
+	}, nil
+}
+
+func (k *KakInit) Callback(exportVars []string, f func(Kak) error) Callback {
+	name := strconv.Itoa(k.callbackCount)
+	return k.CallbackWithName(name, exportVars, f)
+}
+
+func (k *KakInit) CallbackWithName(name string, exportVars []string, f func(Kak) error) Callback {
+	k.callbackCount++
+
+	// if the callback matches, call it.
+	if k.isCallback && name == k.callbackName {
+		cbKak := k.Kak
+		// allow the cb to print commands and etc
+		cbKak.isNop = false
+		if err := f(cbKak); err != nil {
+			cbKak.Failf("gokakoune error: callback %s: %v", name, err)
+		}
+
+		// TODO(leeola): we could potentially reduce work by exiting the process
+		// immediately after calling the callback.
+		//
+		// Ie, when a callback is being requested, there is no other work that
+		// can be done with gokakoune. Yet, a possibly large amount of code
+		// may still be run. We may want to configurably os.Exit(0) after
+		// the callback is called (and maybe even os.Exit(1) if error).
+		//
+		// This is a bit scary to run from inside some random lib, so i may just
+		// put some type of hook instead, and let the API user define
+		// kak.OnDone(func()) themselves, which seems like a better solution.
+	}
+
+	return Callback{
+		Name:       name,
+		ExportVars: exportVars,
 	}
 }
 
-func (k *Kak) Debug(v ...interface{}) {
+func (k Kak) Debug(v ...interface{}) {
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -105,12 +145,12 @@ func (k *Kak) Debug(v ...interface{}) {
 	k.Println("echo", "-debug", s)
 }
 
-func (k *Kak) Debugf(f string, v ...interface{}) {
+func (k Kak) Debugf(f string, v ...interface{}) {
 	s := Escape(fmt.Sprintf(f, v...))
 	k.Println("echo", "-debug", s)
 }
 
-func (k *Kak) Echo(v ...interface{}) {
+func (k Kak) Echo(v ...interface{}) {
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -123,11 +163,11 @@ func (k *Kak) Echo(v ...interface{}) {
 	k.Printf("echo %q\n", s)
 }
 
-func (k *Kak) Echof(f string, v ...interface{}) {
+func (k Kak) Echof(f string, v ...interface{}) {
 	k.Printf("echo %q\n", fmt.Sprintf(f, v...))
 }
 
-func (k *Kak) Fail(v ...interface{}) {
+func (k Kak) Fail(v ...interface{}) {
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -140,7 +180,7 @@ func (k *Kak) Fail(v ...interface{}) {
 	k.Printf("fail %q\n", s)
 }
 
-func (k *Kak) Failf(f string, v ...interface{}) {
+func (k Kak) Failf(f string, v ...interface{}) {
 	k.Println("fail", fmt.Sprintf(f, v...))
 }
 
@@ -148,22 +188,25 @@ func (k *Kak) Failf(f string, v ...interface{}) {
 //
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
-func (k *Kak) Print(v ...interface{}) {
-	fmt.Fprint(k.writer, v...)
+func (k Kak) Print(v ...interface{}) error {
+	_, err := fmt.Fprint(k.writer, v...)
+	return err
 }
 
 // Println to the internal writer.
 //
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
-func (k *Kak) Println(v ...interface{}) {
-	fmt.Fprintln(k.writer, v...)
+func (k Kak) Println(v ...interface{}) error {
+	_, err := fmt.Fprintln(k.writer, v...)
+	return err
 }
 
 // Printf to the internal writer.
 //
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
-func (k *Kak) Printf(f string, v ...interface{}) {
-	fmt.Fprintf(k.writer, f, v...)
+func (k Kak) Printf(f string, v ...interface{}) error {
+	_, err := fmt.Fprintf(k.writer, f, v...)
+	return err
 }

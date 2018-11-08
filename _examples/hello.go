@@ -4,8 +4,8 @@ import (
 	"github.com/leeola/gokakoune/api"
 )
 
-var Hello = api.Func{
-	Func: func(kak *api.Kak) error {
+var Hello = api.Exp{
+	Content: func(kak *api.Kak) error {
 		kak.Echo("hello world")
 		return nil
 	},

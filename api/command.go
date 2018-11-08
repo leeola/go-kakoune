@@ -118,127 +118,22 @@ type DefineCommandOptions struct {
 //
 // }
 
-func (k *Kak) DefineCommand(name string, opts DefineCommandOptions, exps ...Expansion) error {
-	cd := DefineCommand{
-		Name:       name,
-		Options:    opts,
-		Expansions: exps,
-	}
-
-	return k.Expansion(cd)
-}
-
-// func (k *Kak) RegisterFunc(f *Func) error {
-// 	// noop if func was already called
-// 	if k.funcCalled {
-// 		return nil
-// 	}
-//
-// 	// automatically assign func id if one is not provided.
-// 	if f.ID == "" {
-// 		f.ID = strconv.Itoa(k.funcAutoID)
-// 		k.funcAutoID++
-// 	}
-//
-// 	// if gokakoune is initing, there's no need to do any registering.
-// 	if k.gokakouneInit {
-// 		return nil
-// 	}
-//
-// 	// noop if the id doesn't match.
-// 	if f.ID != k.funcID {
-// 		return nil
-// 	}
-//
-// 	return f.Func(k)
-// }
-
-// Expansion processes a Gokakoune expansion.
-//
-// Printing commands, registering functions, etc.
-func (k *Kak) Expansion(exp Expansion) error {
-	// noop if func was already called
-	if k.funcCalled {
+func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exp Expander) error {
+	if k.isNop {
 		return nil
 	}
 
-	if k.gokakouneInit {
-		init, err := k.initExpansion(exp)
-		if err != nil {
-			return err
-		}
-
-		k.Println(init)
-
-		// returning here ensures we don't run expansions when gokakoune
-		// should be initializing.
-		return nil
+	_, err := fmt.Fprintf(k.writer, "define-command -params %d %s ", opts.Params, name)
+	if err != nil {
+		return fmt.Errorf("fprintf cmd start: %v", err)
 	}
 
-	return k.runExpansion(exp)
-}
-
-func (k *Kak) runExpansion(exp Expansion) error {
-	// noop if func was already called
-	if k.funcCalled {
-		return nil
-	}
-
-	expansionCount := k.expansionCount
-	k.expansionCount++
-
-	for _, cExp := range exp.Children() {
-		if err := k.runExpansion(cExp); err != nil {
-			return err
-		}
-	}
-
-	if expansionCount != k.expansionID {
-		return nil
-	}
-
-	k.funcCalled = true
-
-	runnable, ok := exp.(Runnable)
-	if !ok {
-		return fmt.Errorf("not runnable expansion: %d", expansionCount)
-	}
-
-	// NOTE(leeola): this behavior of consuming the error and printing
-	// it to the user is debatable. My thought process though is that
-	// gokakoune isn't failing, so the main k.Expansion() or k.DefineCommand()
-	// API shouldn't be failing. The user command is failing, but that's
-	// on their side.
-	//
-	// This differs from the error above, where an expansion is not runnable,
-	// that's clearly related to a gokakoune error.
-	if err := runnable.Run(k); err != nil {
-		// report the error to the user
-		k.Fail(err)
+	// temp using empty context
+	if err := wrapExpansion(exp).Expand(k); err != nil {
+		return fmt.Errorf("expansion expand: %v", err)
 	}
 
 	return nil
-}
-
-func (k *Kak) initExpansion(exp Expansion) (string, error) {
-	expansionCount := k.expansionCount
-	k.expansionCount++
-
-	var childInits []string
-	for _, cExp := range exp.Children() {
-		init, err := k.initExpansion(cExp)
-		if err != nil {
-			return "", err
-		}
-
-		childInits = append(childInits, init)
-	}
-
-	return exp.Init(Context{
-		BinName:  k.gokakouneBin,
-		ID:       expansionCount,
-		Children: childInits,
-	})
 }
 
 // Command calls a kakoune command directly, escaping arguments
@@ -270,4 +165,31 @@ func (k *Kak) Command(name string, args ...interface{}) {
 	}
 
 	k.Println(v...)
+}
+
+func (k Kak) Prompt(promptMsg string, exp Expander) error {
+	_, err := fmt.Fprintf(k.writer, "prompt %q ", promptMsg)
+	if err != nil {
+		return fmt.Errorf("fprintf cmd start: %v", err)
+	}
+
+	return wrapExpansion(exp).Expand(k)
+}
+
+// wrapExpansion ensures that an expansion block used will be wrapped
+// by a plain %{} expansion.
+//
+//  Eg, %sh{} would become %{ %sh{} }. The function will not needlessly
+// wrap a plain Expansion. Ie %{} does not become %{ %{} }.
+func wrapExpansion(unwrapped Expander) Expander {
+	exp := unwrapped
+	if _, ok := unwrapped.(Expansion); !ok {
+		exp = Expansion{
+			Body: func(k Kak) error {
+				return unwrapped.Expand(k)
+			},
+		}
+	}
+
+	return exp
 }

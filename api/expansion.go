@@ -5,9 +5,10 @@ import (
 	"strings"
 )
 
-type Expansion interface {
-	Init(Context) (string, error)
-	Children() []Expansion
+type BlockFunc func(Kak) error
+
+type Expander interface {
+	Expand(Kak) error
 }
 
 type Runnable interface {
@@ -20,7 +21,95 @@ type Context struct {
 	Children []string
 }
 
-type Expansions []Expansion
+type Expanders []Expander
+
+type Expansion struct {
+	// Body is responsible for rendering the body of this expansion.
+	Body BlockFunc
+}
+
+type Callback struct {
+	Name       string
+	ExportVars []string
+}
+
+type Sh struct {
+	// Body is responsible for rendering the body of this expansion.
+	Body BlockFunc
+
+	ExportVars []string
+}
+
+func (exp Expansion) Expand(k Kak) error {
+	_, err := fmt.Fprintf(k.writer, "%%{\n")
+	if err != nil {
+		return fmt.Errorf("print open: %v", err)
+	}
+
+	if err := exp.Body(k); err != nil {
+		return fmt.Errorf("body: %v", err)
+	}
+
+	_, err = fmt.Fprintf(k.writer, "}\n")
+	if err != nil {
+		return fmt.Errorf("print close: %v", err)
+	}
+
+	return nil
+}
+
+func (exp Callback) Expand(k Kak) error {
+	// TODO(leeola): this should be moved into the wrapper. Eg, if a wrapper
+	// wraps a shell, it prefixes it with the `evaluate-commands` call.
+	//
+	// This inclusion here is just a bit of a hack.
+	k.Print("evaluate-commands ")
+
+	return (Sh{
+		ExportVars: exp.ExportVars,
+		Body: func(k Kak) error {
+			err := k.Printf("%s %s \"$@\"\n", k.gokakouneBin, exp.Name)
+			if err != nil {
+				return fmt.Errorf("callback %s print: %v", exp.Name, err)
+			}
+			return nil
+		},
+	}).Expand(k)
+}
+
+func (exp Sh) Expand(k Kak) error {
+	vars := make([]string, len(exp.ExportVars))
+	for i, v := range exp.ExportVars {
+		vars[i] = "$kak_" + v
+	}
+
+	err := k.Printf(`%%sh{
+# the following variables are being written in the def source
+# code to make Kakoune export them to this shell scope. By doing
+# so, they become available to shell code running within this scope.
+#
+# Note that it appears Kakoune just uses regex on the codeblock,
+# so the fact that the variables are commented out does not matter.
+# It exports any kak variables specified in this block.
+#
+# %s
+
+`, vars)
+	if err != nil {
+		return fmt.Errorf("print open: %v", err)
+	}
+
+	if err := exp.Body(k); err != nil {
+		return fmt.Errorf("body: %v", err)
+	}
+
+	err = k.Printf("}\n")
+	if err != nil {
+		return fmt.Errorf("print close: %v", err)
+	}
+
+	return nil
+}
 
 type DefineCommand struct {
 	Name string
@@ -48,9 +137,6 @@ type Func struct {
 	ExportVars []string
 
 	Func func(*Kak) error
-}
-
-type Sh struct {
 }
 
 type Prompt struct {
@@ -125,4 +211,10 @@ func (e Prompt) Init(ctx Context) (string, error) {
 
 func (e Prompt) Children() []Expansion {
 	return e.Expansions
+}
+
+func (k Kak) Expansion(f BlockFunc) Expansion {
+	return Expansion{
+		Body: f,
+	}
 }
