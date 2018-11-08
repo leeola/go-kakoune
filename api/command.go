@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"strings"
 )
 
 // Subproc executes Go code in a subproc of Kakoune.
@@ -184,6 +185,29 @@ func (k Kak) EvaluateCommands(exp Expander) error {
 
 	// do not wrap Sh. It doesn't need it, and will endlessly loop if you do ;)
 	return exp.Expand(k)
+}
+
+func (k Kak) Hook(scope, hookName, filteringRegex string, exp Expander) error {
+	_, err := fmt.Fprintf(k.writer, "hook %s %s %s ", scope, hookName, filteringRegex)
+	if err != nil {
+		return fmt.Errorf("print cmd: %v", err)
+	}
+
+	return wrapSh(exp).Expand(k)
+}
+
+func (k Kak) DeclareOption(flags []string, kakType, optName string) error {
+	flagStr := strings.Join(flags, " ")
+	if len(flags) != 0 {
+		flagStr += " "
+	}
+
+	_, err := fmt.Fprintf(k.writer, "declare-option %s%s %s\n", flagStr, kakType, optName)
+	if err != nil {
+		return fmt.Errorf("print cmd: %v", err)
+	}
+
+	return nil
 }
 
 // wrapSh ensures that a shell expansion will be wrapped
