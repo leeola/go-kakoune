@@ -15,21 +15,24 @@ import (
 
 const (
 	httpProxyPortFilename = "httpProxy.port"
+	tabnineLogFilename    = "TabNine.log"
 )
 
 type HTTPClient struct {
-	addr string
+	addr, url string
 }
 
 type HTTPServerConfig struct {
 	TabnineBin string
 	ConfigDir  string
+	LogTabnine bool
 }
 
 // TODO(leeola): improve ionfigocess pid / port recording,
 // plain files offer no concurrent safety and are a bit meh.
 type HTTPServer struct {
 	tabnineBin    string
+	logTabnine    bool
 	configDir     string
 	tabnineStdin  io.Writer
 	tabnineStdout *bufio.Reader
@@ -43,19 +46,23 @@ func NewHTTPClient(configDir string) (HTTPClient, error) {
 	}
 
 	addr := fmt.Sprintf("localhost:%s", string(b))
+	url := "http://" + addr
 
-	return HTTPClient{addr: addr}, nil
+	return HTTPClient{addr: addr, url: url}, nil
 }
 
 func NewHTTPServer(c HTTPServerConfig) (HTTPServer, error) {
 	return HTTPServer{
 		tabnineBin: c.TabnineBin,
 		configDir:  c.ConfigDir,
+		logTabnine: c.LogTabnine,
 	}, nil
 }
 
 func (c HTTPClient) SendRecv(req io.Reader) (io.ReadCloser, error) {
-	res, err := http.Post(c.addr, "", req)
+	url := "http://" + c.addr
+
+	res, err := http.Post(url, "", req)
 	if err != nil {
 		return nil, fmt.Errorf("post: %v", err)
 	}
@@ -63,7 +70,12 @@ func (c HTTPClient) SendRecv(req io.Reader) (io.ReadCloser, error) {
 }
 
 func (h *HTTPServer) ListenAndServe(addr string) error {
-	cmd := exec.Command(h.tabnineBin)
+	var args []string
+	if h.logTabnine {
+		logPath := filepath.Join(h.configDir, tabnineLogFilename)
+		args = append(args, "--log-file-path", logPath)
+	}
+	cmd := exec.Command(h.tabnineBin, args...)
 
 	// TODO(leeola): defer closure of the pipe.
 	stdin, err := cmd.StdinPipe()
