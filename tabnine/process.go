@@ -23,8 +23,8 @@ type Process struct {
 
 func NewProcess(c Config) (*Process, error) {
 	return &Process{
-		binPath:     c.Bin,
-		workingPath: c.Working,
+		binPath:     c.TabnineBin,
+		workingPath: c.ConfigDir,
 	}, nil
 }
 
@@ -190,5 +190,23 @@ func (t Process) openStdoutPipe() (*os.File, error) {
 		return nil, fmt.Errorf("openfile: %v", err)
 	}
 
+	return stdout, nil
+}
+
+func openStdinClient(workingPath string) (*os.File, error) {
+	p := filepath.Join(workingPath, stdinFilename)
+	stdin, err := os.OpenFile(p, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
+	if err != nil {
+		return nil, fmt.Errorf("openfile: %v", err)
+	}
+	return stdin, nil
+}
+
+func openStdoutClient(workingPath string) (*os.File, error) {
+	p := filepath.Join(workingPath, stdoutFilename)
+	stdout, err := os.OpenFile(p, os.O_RDONLY, os.ModeNamedPipe)
+	if err != nil {
+		return nil, fmt.Errorf("openfile: %v", err)
+	}
 	return stdout, nil
 }
