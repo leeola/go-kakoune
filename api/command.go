@@ -119,9 +119,13 @@ type DefineCommandOptions struct {
 //
 // }
 
-func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exp Expander) error {
+func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exps ...Expander) error {
 	if k.isNop {
 		return nil
+	}
+
+	if len(exps) == 0 {
+		return fmt.Errorf("at least one expansion is required")
 	}
 
 	_, err := fmt.Fprintf(k.writer, "define-command -params %d %s ", opts.Params, name)
@@ -130,7 +134,7 @@ func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exp Expander)
 	}
 
 	// temp using empty context
-	if err := wrapSh(exp).Expand(k); err != nil {
+	if err := wrapSh(toExp(exps)).Expand(k); err != nil {
 		return fmt.Errorf("expansion expand: %v", err)
 	}
 
@@ -234,4 +238,21 @@ func wrapSh(exp Expander) Expander {
 	}
 
 	return exp
+}
+
+func defaultPrefix(k Kak, exp Expander) error {
+	switch v := exp.(type) {
+	case Expansion, Callback, Sh:
+		return k.EvaluateCommands(v)
+	default:
+		// no expansion
+		return exp.Expand(k)
+	}
+}
+
+func toExp(exps []Expander) Expander {
+	if len(exps) == 1 {
+		return exps[0]
+	}
+	return Expansions(exps)
 }

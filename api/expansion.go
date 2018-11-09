@@ -28,6 +28,8 @@ type Expansion struct {
 	Body BlockFunc
 }
 
+type Expansions []Expander
+
 type Callback struct {
 	Name       string
 	ExportVars []string
@@ -55,6 +57,23 @@ func (exp Expansion) Expand(k Kak) error {
 		return fmt.Errorf("print close: %v", err)
 	}
 
+	return nil
+}
+
+func (exps Expansions) Expand(k Kak) error {
+	_, err := fmt.Fprintf(k.writer, "%%{\n")
+	if err != nil {
+		return fmt.Errorf("print open: %v", err)
+	}
+	for i, exp := range exps {
+		if err := defaultPrefix(k, exp); err != nil {
+			return fmt.Errorf("prefix #%d: %v", i, err)
+		}
+	}
+	_, err = fmt.Fprintf(k.writer, "}\n")
+	if err != nil {
+		return fmt.Errorf("print close: %v", err)
+	}
 	return nil
 }
 
