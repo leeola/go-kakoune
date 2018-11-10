@@ -194,7 +194,7 @@ func (k Kak) ExecuteKeys(keys string) error {
 		return nil
 	}
 
-	_, err := fmt.Fprint(k.writer, "execute-keys %q", keys)
+	_, err := fmt.Fprintf(k.writer, "execute-keys %q", keys)
 	if err != nil {
 		return fmt.Errorf("fprintf: %v", err)
 	}
@@ -207,7 +207,7 @@ func (k Kak) EvaluateCommands(flags []string, exp Expander) error {
 		return nil
 	}
 
-	_, err := fmt.Fprintf(k.writer, "evaluate-commands %s", joinAndTrail(flags))
+	_, err := fmt.Fprintf(k.writer, "evaluate-commands %s", flagsToStr(flags))
 	if err != nil {
 		return fmt.Errorf("fprintf eval: %v", err)
 	}
@@ -216,12 +216,12 @@ func (k Kak) EvaluateCommands(flags []string, exp Expander) error {
 	return exp.Expand(k)
 }
 
-func (k Kak) Hook(scope, hookName, filteringRegex string, exp Expander) error {
+func (k Kak) Hook(flags []string, scope, hookName, filteringRegex string, exp Expander) error {
 	if k.isNop {
 		return nil
 	}
 
-	_, err := fmt.Fprintf(k.writer, "hook %s %s %s ", scope, hookName, filteringRegex)
+	_, err := fmt.Fprintf(k.writer, "hook %s%s %s %s ", flagsToStr(flags), scope, hookName, filteringRegex)
 	if err != nil {
 		return fmt.Errorf("print cmd: %v", err)
 	}
@@ -290,7 +290,7 @@ func toExp(exps []Expander) Expander {
 	return Expansions(exps)
 }
 
-func joinAndTrail(ss []string) string {
+func flagsToStr(ss []string) string {
 	if len(ss) == 0 {
 		return ""
 	}
