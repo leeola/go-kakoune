@@ -135,6 +135,10 @@ func (k *KakInit) CallbackWithName(name string, exportVars []string, f func(Kak)
 }
 
 func (k Kak) Debug(v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -146,11 +150,19 @@ func (k Kak) Debug(v ...interface{}) {
 }
 
 func (k Kak) Debugf(f string, v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	s := Escape(fmt.Sprintf(f, v...))
 	k.Println("echo", "-debug", s)
 }
 
 func (k Kak) Echo(v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -164,10 +176,18 @@ func (k Kak) Echo(v ...interface{}) {
 }
 
 func (k Kak) Echof(f string, v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	k.Printf("echo %q\n", fmt.Sprintf(f, v...))
 }
 
 func (k Kak) Fail(v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	// TODO(leeola): figure out the fastest way to print the v...
 	// as if Sprintln did it, but WITHOUT the newline at the end.
 	//
@@ -181,6 +201,10 @@ func (k Kak) Fail(v ...interface{}) {
 }
 
 func (k Kak) Failf(f string, v ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	k.Println("fail", fmt.Sprintf(f, v...))
 }
 
@@ -189,6 +213,10 @@ func (k Kak) Failf(f string, v ...interface{}) {
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
 func (k Kak) Print(v ...interface{}) error {
+	if k.isNop {
+		return nil
+	}
+
 	_, err := fmt.Fprint(k.writer, v...)
 	return err
 }
@@ -198,6 +226,10 @@ func (k Kak) Print(v ...interface{}) error {
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
 func (k Kak) Println(v ...interface{}) error {
+	if k.isNop {
+		return nil
+	}
+
 	_, err := fmt.Fprintln(k.writer, v...)
 	return err
 }
@@ -207,6 +239,10 @@ func (k Kak) Println(v ...interface{}) error {
 // This is a lower level interface, allowing you to send arbitrary
 // commands to Kakoune. Use with caution.
 func (k Kak) Printf(f string, v ...interface{}) error {
+	if k.isNop {
+		return nil
+	}
+
 	_, err := fmt.Fprintf(k.writer, f, v...)
 	return err
 }

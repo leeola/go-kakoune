@@ -144,6 +144,10 @@ func (k Kak) DefineCommand(name string, opts DefineCommandOptions, exps ...Expan
 // Command calls a kakoune command directly, escaping arguments
 // automatically.
 func (k *Kak) Command(name string, args ...interface{}) {
+	if k.isNop {
+		return
+	}
+
 	v := make([]interface{}, len(args)+1)
 	v[0] = name
 	for i, a := range args {
@@ -173,6 +177,10 @@ func (k *Kak) Command(name string, args ...interface{}) {
 }
 
 func (k Kak) Prompt(promptMsg string, exp Expander) error {
+	if k.isNop {
+		return nil
+	}
+
 	_, err := fmt.Fprintf(k.writer, "prompt %q ", promptMsg)
 	if err != nil {
 		return fmt.Errorf("fprintf cmd start: %v", err)
@@ -181,8 +189,25 @@ func (k Kak) Prompt(promptMsg string, exp Expander) error {
 	return wrapSh(exp).Expand(k)
 }
 
-func (k Kak) EvaluateCommands(exp Expander) error {
-	_, err := fmt.Fprint(k.writer, "evaluate-commands ")
+func (k Kak) ExecuteKeys(keys string) error {
+	if k.isNop {
+		return nil
+	}
+
+	_, err := fmt.Fprint(k.writer, "execute-keys %q", keys)
+	if err != nil {
+		return fmt.Errorf("fprintf: %v", err)
+	}
+
+	return nil
+}
+
+func (k Kak) EvaluateCommands(flags []string, exp Expander) error {
+	if k.isNop {
+		return nil
+	}
+
+	_, err := fmt.Fprintf(k.writer, "evaluate-commands %s", joinAndTrail(flags))
 	if err != nil {
 		return fmt.Errorf("fprintf eval: %v", err)
 	}
@@ -192,6 +217,10 @@ func (k Kak) EvaluateCommands(exp Expander) error {
 }
 
 func (k Kak) Hook(scope, hookName, filteringRegex string, exp Expander) error {
+	if k.isNop {
+		return nil
+	}
+
 	_, err := fmt.Fprintf(k.writer, "hook %s %s %s ", scope, hookName, filteringRegex)
 	if err != nil {
 		return fmt.Errorf("print cmd: %v", err)
@@ -201,6 +230,10 @@ func (k Kak) Hook(scope, hookName, filteringRegex string, exp Expander) error {
 }
 
 func (k Kak) DeclareOption(flags []string, kakType, optName string) error {
+	if k.isNop {
+		return nil
+	}
+
 	flagStr := strings.Join(flags, " ")
 	if len(flags) != 0 {
 		flagStr += " "
@@ -228,7 +261,7 @@ func wrapSh(exp Expander) Expander {
 	case Callback, Sh:
 		exp = Expansion{
 			Body: func(k Kak) error {
-				return k.EvaluateCommands(v)
+				return k.EvaluateCommands(nil, v)
 			},
 		}
 	default:
@@ -243,7 +276,7 @@ func wrapSh(exp Expander) Expander {
 func defaultPrefix(k Kak, exp Expander) error {
 	switch v := exp.(type) {
 	case Expansion, Callback, Sh:
-		return k.EvaluateCommands(v)
+		return k.EvaluateCommands(nil, v)
 	default:
 		// no expansion
 		return exp.Expand(k)
@@ -255,4 +288,12 @@ func toExp(exps []Expander) Expander {
 		return exps[0]
 	}
 	return Expansions(exps)
+}
+
+func joinAndTrail(ss []string) string {
+	if len(ss) == 0 {
+		return ""
+	}
+
+	return strings.Join(ss, " ") + " "
 }
