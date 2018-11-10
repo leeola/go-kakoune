@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	pidFilename    = "TabNine.pid"
+	pidFilename    = "tabnine.pid"
 	stdinFilename  = "PIPE_STDIN"
 	stdoutFilename = "PIPE_STDOUT"
 )

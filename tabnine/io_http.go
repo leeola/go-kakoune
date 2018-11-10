@@ -15,7 +15,7 @@ import (
 
 const (
 	httpProxyPortFilename = "httpProxy.port"
-	tabnineLogFilename    = "TabNine.log"
+	tabnineLogFilename    = "tabnine.log"
 )
 
 type HTTPClient struct {
