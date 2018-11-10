@@ -26,23 +26,31 @@ func Plugin(k *api.KakInit) error {
 		return fmt.Errorf("declareoption tabnine_after: %v", err)
 	}
 
-	err := k.Hook("global", "WinCreate", ".*", k.Expansion(func(k api.Kak) error {
+	err := k.Hook(nil, "global", "WinCreate", ".*", k.Expansion(func(k api.Kak) error {
 		// experimenting with full completion, disabling other completers
 		// k.Command("set-option", "window", "completers", "option=tabnine_completions", "%opt{completers}")
 		k.Command("set-option", "window", "completers", "option=tabnine_completions")
 
 		k.Command("tabnine-prefetch")
 
-		return k.Hook("window", "InsertIdle", ".*", k.Expansion(func(k api.Kak) error {
+		err := k.Hook(nil, "window", "InsertIdle", ".*", k.Expansion(func(k api.Kak) error {
+			k.Debug("insert idle, tabnine")
 			k.Command("tabnine")
 			return nil
 		}))
+		if err != nil {
+			return err
+		}
 
-		return k.Hook("window", "BufWritePost", ".*", k.Expansion(func(k api.Kak) error {
+		err = k.Hook(nil, "window", "BufWritePost", ".*", k.Expansion(func(k api.Kak) error {
 			k.Command("tabnine-prefetch")
 			return nil
 		}))
+		if err != nil {
+			return err
+		}
 
+		return nil
 	}))
 	if err != nil {
 		return fmt.Errorf("window hook: %v", err)
@@ -107,14 +115,18 @@ func Plugin(k *api.KakInit) error {
 				k.Debug("no results")
 			}
 
-			header := fmt.Sprintf("%d.%d@%d", line, col, timestamp)
+			subLen := len(res.SuffixToSubstitute)
+			subCol := col - subLen
+
+			header := fmt.Sprintf("%d.%d+%d@%d", line, subCol, subLen, timestamp)
 			args := []interface{}{"buffer=" + bufname, "tabnine_completions", header}
 			for _, result := range res.Results {
 				// trim the suffix substitute.
 				//
 				// This ensures that to complete `foo` with `foobarbaz`, you don't
 				// result in `foofoobarbaz`.
-				text := strings.TrimPrefix(result.Result, res.SuffixToSubstitute)
+				// text := strings.TrimPrefix(result.Result, res.SuffixToSubstitute)
+				text := result.Result
 				// escape pipes
 				escapedText := strings.Replace(text, "|", "\\|", -1)
 				escapedMenuText := strings.Replace(result.Result, "|", "\\|", -1)
