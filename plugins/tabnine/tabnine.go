@@ -3,6 +3,8 @@ package tnp
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -33,6 +35,8 @@ func Plugin(k *api.KakInit) error {
 		// experimenting with full completion, disabling other completers
 		// k.Command("set-option", "window", "completers", "option=tabnine_completions", "%opt{completers}")
 		k.Command("set-option", "window", "completers", "option=tabnine_completions")
+
+		k.Command("tabnine-start")
 
 		k.Command("tabnine-prefetch")
 
@@ -212,6 +216,21 @@ func Plugin(k *api.KakInit) error {
 			}
 
 			return nil
+		}))
+	if err != nil {
+		return fmt.Errorf("define cmd tabnine-prefetch: %v", err)
+	}
+
+	opts = api.DefineCommandOptions{}
+	err = k.DefineCommand("tabnine-start", opts, k.Callback(nil,
+		func(k api.Kak) error {
+			if len(os.Args) < 1 {
+				return fmt.Errorf("os args missing exec value, first arg")
+			}
+			selfBin := os.Args[0]
+
+			cmd := exec.Command(selfBin, "http-serve-background")
+			return cmd.Run()
 		}))
 	if err != nil {
 		return fmt.Errorf("define cmd tabnine-prefetch: %v", err)
