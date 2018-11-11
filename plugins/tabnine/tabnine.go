@@ -41,7 +41,6 @@ func Plugin(k *api.KakInit) error {
 		k.Command("tabnine-prefetch")
 
 		err := k.Hook(nil, "window", "InsertIdle", ".*", k.Expansion(func(k api.Kak) error {
-			k.Debug("insert idle, tabnine")
 			k.Command("tabnine")
 			return nil
 		}))
@@ -222,7 +221,8 @@ func Plugin(k *api.KakInit) error {
 	}
 
 	opts = api.DefineCommandOptions{}
-	err = k.DefineCommand("tabnine-start", opts, k.Callback(nil,
+	err = k.DefineCommand("tabnine-start", opts, k.Callback(
+		[]string{"config"},
 		func(k api.Kak) error {
 			if len(os.Args) < 1 {
 				return fmt.Errorf("os args missing exec value, first arg")
@@ -230,7 +230,13 @@ func Plugin(k *api.KakInit) error {
 			selfBin := os.Args[0]
 
 			cmd := exec.Command(selfBin, "http-serve-background")
-			return cmd.Run()
+			b, err := cmd.CombinedOutput()
+			if err != nil {
+				k.Debug("http-serve-background failed:", string(b))
+				return fmt.Errorf("http-serve-background: %v", err)
+			}
+
+			return nil
 		}))
 	if err != nil {
 		return fmt.Errorf("define cmd tabnine-prefetch: %v", err)
