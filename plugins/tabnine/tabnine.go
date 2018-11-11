@@ -136,15 +136,12 @@ func Plugin(k *api.KakInit) error {
 			header := fmt.Sprintf("%d.%d+%d@%d", line, subCol, subLen, timestamp)
 			args := []interface{}{"buffer=" + bufname, "tabnine_completions", header}
 			for _, result := range res.Results {
-				// trim the suffix substitute.
-				//
-				// This ensures that to complete `foo` with `foobarbaz`, you don't
-				// result in `foofoobarbaz`.
-				// text := strings.TrimPrefix(result.Result, res.SuffixToSubstitute)
 				text := result.Result
 				// escape pipes
 				escapedText := strings.Replace(text, "|", "\\|", -1)
-				escapedMenuText := strings.Replace(result.Result, "|", "\\|", -1)
+				// escape facets?
+				escapedMenuText := strings.Replace(escapedText, "{", `\{`, -1)
+
 				compl := escapedText + "||" + escapedMenuText
 				args = append(args, compl)
 			}
