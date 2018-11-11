@@ -25,7 +25,7 @@ func main() {
 		return
 	case "http-serve-background":
 		if err := httpServeBackgroundMain(); err != nil {
-			log.Fatalf("httpServeMain: %v", err)
+			log.Fatalf("httpServeBackgroundMain: %v", err)
 		}
 		return
 	}
@@ -93,10 +93,16 @@ func httpServeMain() error {
 
 	configDir := filepath.Join(kakConfigDir, "tabnine")
 
-	// TODO(leeola): create a downloader that ensures we have the
-	// latest TabNine binary for the current system. For now i'm
-	// hard coding the bin path.
-	tabnineBin := filepath.Join(configDir, "binaries", "0.11.2", "x86_64-apple-darwin", "TabNine")
+	versions, err := tabnine.NewVersions(configDir)
+	if err != nil {
+		return fmt.Errorf("NewVersions: %v", err)
+	}
+
+	// download latest, *if needed*
+	tabnineBin, err := versions.EnsureLatestBin()
+	if err != nil {
+		return fmt.Errorf("EnsureLatestBin: %v", err)
+	}
 
 	c := tabnine.HTTPServerConfig{
 		TabnineBin: tabnineBin,

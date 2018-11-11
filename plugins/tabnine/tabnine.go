@@ -183,34 +183,36 @@ func Plugin(k *api.KakInit) error {
 	}
 
 	opts = api.DefineCommandOptions{}
-	err = k.DefineCommand("tabnine-prefetch", opts, k.Callback([]string{"buffile"}, func(k api.Kak) error {
-		buffile, err := k.Var("buffile")
-		if err != nil {
-			return err
-		}
-		kakConfigDir, err := k.Var("config")
-		if err != nil {
-			return err
-		}
+	err = k.DefineCommand("tabnine-prefetch", opts, k.Callback(
+		[]string{"buffile", "config"},
+		func(k api.Kak) error {
+			buffile, err := k.Var("buffile")
+			if err != nil {
+				return err
+			}
+			kakConfigDir, err := k.Var("config")
+			if err != nil {
+				return err
+			}
 
-		if buffile == "*debug*" || buffile == "*scratch*" {
+			if buffile == "*debug*" || buffile == "*scratch*" {
+				return nil
+			}
+
+			tn, err := tabnine.New(tabnine.Config{
+				ConfigDir: filepath.Join(kakConfigDir, pluginConfigSubdir),
+			})
+			if err != nil {
+				return fmt.Errorf("tabnine new: %v", err)
+			}
+
+			err = tn.Prefetch(tabnine.PrefetchRequest{Filename: buffile})
+			if err != nil {
+				return fmt.Errorf("tabnine prefetch: %v", err)
+			}
+
 			return nil
-		}
-
-		tn, err := tabnine.New(tabnine.Config{
-			ConfigDir: filepath.Join(kakConfigDir, pluginConfigSubdir),
-		})
-		if err != nil {
-			return fmt.Errorf("tabnine new: %v", err)
-		}
-
-		err = tn.Prefetch(tabnine.PrefetchRequest{Filename: buffile})
-		if err != nil {
-			return fmt.Errorf("tabnine prefetch: %v", err)
-		}
-
-		return nil
-	}))
+		}))
 	if err != nil {
 		return fmt.Errorf("define cmd tabnine-prefetch: %v", err)
 	}
