@@ -69,6 +69,25 @@ func (c HTTPClient) SendRecv(req io.Reader) (io.ReadCloser, error) {
 	return res.Body, nil
 }
 
+func (c HTTPClient) Running() (bool, error) {
+	url := "http://" + c.addr
+
+	fmt.Println("requesting", url)
+	res, err := http.Get(url)
+	if err != nil {
+		return false, nil
+	}
+	defer res.Body.Close()
+
+	b, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return false, fmt.Errorf("ReadAll: %v", err)
+	}
+
+	running := string(b) == "running"
+	return running, nil
+}
+
 func (h *HTTPServer) ListenAndServe(addr string) error {
 	var args []string
 	if h.logTabnine {
@@ -134,7 +153,12 @@ func (h HTTPServer) handler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// ignore non-post/put methods.
-	if r.Method != "POST" && r.Method != "PUT" {
+	switch r.Method {
+	case "POST", "PUT":
+	case "GET":
+		fmt.Fprint(w, "running")
+		return
+	default:
 		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		return
 	}
