@@ -10,21 +10,18 @@ import (
 	"syscall"
 )
 
-const (
-	pidFilename    = "tabnine.pid"
-	stdinFilename  = "PIPE_STDIN"
-	stdoutFilename = "PIPE_STDOUT"
-)
-
 type Process struct {
-	binPath     string
-	workingPath string
+	binPath   string
+	binArgs   []string
+	configDir string
 }
 
-func NewProcess(c Config) (*Process, error) {
-	return &Process{
-		binPath:     c.TabnineBin,
-		workingPath: c.ConfigDir,
+// NewProcess creates a new BackgroundProcess instance.
+func NewProcess(configDir, binPath string, binArgs []string) (Process, error) {
+	return Process{
+		binPath:   binPath,
+		binArgs:   binArgs,
+		configDir: configDir,
 	}, nil
 }
 
@@ -85,23 +82,10 @@ func (t Process) Start() error {
 }
 
 func (t Process) start() error {
-	stdin, err := t.openStdinPipe()
-	if err != nil {
-		return fmt.Errorf("openstdinpipe: %v", err)
+	cmd := exec.Command(t.binPath, t.binArgs...)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("cmd start: %v", err)
 	}
-
-	stdout, err := t.openStdoutPipe()
-	if err != nil {
-		return fmt.Errorf("openstdoutpipe: %v", err)
-	}
-
-	cmd := exec.Command(t.binPath)
-	cmd.Stdin = stdin
-	cmd.Stdout = stdout
-	// should the named pipe files be attached? It seems not required,
-	// though we could be leaking file descriptors here?
-	cmd.ExtraFiles = []*os.File{stdin, stdout}
-	cmd.Start()
 
 	if err := t.writePID(cmd.Process.Pid); err != nil {
 		return fmt.Errorf("writepid %d: %v", cmd.Process.Pid, err)
@@ -110,8 +94,12 @@ func (t Process) start() error {
 	return nil
 }
 
+func (t Process) pidFilename() string {
+	return filepath.Base(t.binPath) + ".pid"
+}
+
 func (t Process) readPID() (int, error) {
-	pidPath := filepath.Join(t.workingPath, pidFilename)
+	pidPath := filepath.Join(t.configDir, t.pidFilename())
 
 	b, err := ioutil.ReadFile(pidPath)
 	if os.IsNotExist(err) {
@@ -136,7 +124,7 @@ func (t Process) writePID(pid int) error {
 		return fmt.Errorf("0 pid not supported currently")
 	}
 
-	pidPath := filepath.Join(t.workingPath, pidFilename)
+	pidPath := filepath.Join(t.configDir, t.pidFilename())
 
 	b := []byte(strconv.Itoa(pid))
 
@@ -145,68 +133,4 @@ func (t Process) writePID(pid int) error {
 	}
 
 	return nil
-}
-
-func (t Process) openStdinPipe() (*os.File, error) {
-	p := filepath.Join(t.workingPath, stdinFilename)
-	flag := os.O_RDWR
-
-	// TODO(leeola): is there a way to open a read or write only pipe
-	// *(for stdin and stdout respectively)*, but still detatched from this
-	// process? The goal is not to have this process block, but do block the
-	// TabNine process waiting for io over the named pipes.
-	stdin, err := os.OpenFile(p, flag, os.ModeNamedPipe)
-	if os.IsNotExist(err) {
-		if err := syscall.Mkfifo(p, 0644); err != nil {
-			return nil, fmt.Errorf("mkfifo: %v", err)
-		}
-
-		stdin, err = os.OpenFile(p, flag, os.ModeNamedPipe)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("openfile: %v", err)
-	}
-
-	return stdin, nil
-}
-
-func (t Process) openStdoutPipe() (*os.File, error) {
-	p := filepath.Join(t.workingPath, stdoutFilename)
-	flag := os.O_RDWR
-
-	// TODO(leeola): is there a way to open a read or write only pipe
-	// *(for stdin and stdout respectively)*, but still detatched from this
-	// process? The goal is not to have this process block, but do block the
-	// TabNine process waiting for io over the named pipes.
-	stdout, err := os.OpenFile(p, flag, os.ModeNamedPipe)
-	if os.IsNotExist(err) {
-		if err := syscall.Mkfifo(p, 0644); err != nil {
-			return nil, fmt.Errorf("mkfifo: %v", err)
-		}
-
-		stdout, err = os.OpenFile(p, flag, os.ModeNamedPipe)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("openfile: %v", err)
-	}
-
-	return stdout, nil
-}
-
-func openStdinClient(workingPath string) (*os.File, error) {
-	p := filepath.Join(workingPath, stdinFilename)
-	stdin, err := os.OpenFile(p, os.O_WRONLY|syscall.O_NONBLOCK, os.ModeNamedPipe)
-	if err != nil {
-		return nil, fmt.Errorf("openfile: %v", err)
-	}
-	return stdin, nil
-}
-
-func openStdoutClient(workingPath string) (*os.File, error) {
-	p := filepath.Join(workingPath, stdoutFilename)
-	stdout, err := os.OpenFile(p, os.O_RDONLY, os.ModeNamedPipe)
-	if err != nil {
-		return nil, fmt.Errorf("openfile: %v", err)
-	}
-	return stdout, nil
 }

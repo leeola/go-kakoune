@@ -1,7 +1,9 @@
-package tabnine
+// Tabnine plugin
+package tnp
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/leeola/gokakoune/api"
@@ -9,8 +11,9 @@ import (
 )
 
 const (
-	lookBeforeMax = 3000
-	lookAfterMax  = 3000
+	lookBeforeMax      = 3000
+	lookAfterMax       = 3000
+	pluginConfigSubdir = "tabnine"
 )
 
 func Plugin(k *api.KakInit) error {
@@ -57,7 +60,9 @@ func Plugin(k *api.KakInit) error {
 	}
 
 	tabnineCallback := k.Callback(
-		[]string{"cursor_line", "cursor_column", "timestamp", "bufname", "buffile",
+		[]string{
+			"cursor_line", "cursor_column", "timestamp", "bufname", "buffile",
+			"config",
 			"opt_tabnine_before", "opt_tabnine_after"},
 		func(k api.Kak) error {
 			buffile, err := k.Var("buffile")
@@ -94,7 +99,14 @@ func Plugin(k *api.KakInit) error {
 				return err
 			}
 
-			tn, err := tabnine.New(tabnine.Config{ConfigDir: "./_tmp"})
+			kakConfigDir, err := k.Var("config")
+			if err != nil {
+				return err
+			}
+
+			tn, err := tabnine.New(tabnine.Config{
+				ConfigDir: filepath.Join(kakConfigDir, pluginConfigSubdir),
+			})
 			if err != nil {
 				return fmt.Errorf("tabnine new: %v", err)
 			}
@@ -176,12 +188,18 @@ func Plugin(k *api.KakInit) error {
 		if err != nil {
 			return err
 		}
+		kakConfigDir, err := k.Var("config")
+		if err != nil {
+			return err
+		}
 
 		if buffile == "*debug*" || buffile == "*scratch*" {
 			return nil
 		}
 
-		tn, err := tabnine.New(tabnine.Config{ConfigDir: "./_tmp"})
+		tn, err := tabnine.New(tabnine.Config{
+			ConfigDir: filepath.Join(kakConfigDir, pluginConfigSubdir),
+		})
 		if err != nil {
 			return fmt.Errorf("tabnine new: %v", err)
 		}
