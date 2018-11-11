@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/leeola/gokakoune/api"
 	tnp "github.com/leeola/gokakoune/plugins/tabnine"
@@ -75,37 +74,6 @@ func httpServeBackgroundMain() error {
 
 	if err := bp.EnsureStarted(); err != nil {
 		return fmt.Errorf("EnsureStarted: %v", err)
-	}
-
-	// somehow we have to give the http proxy time to start, so
-	// as a hacky measure, we'll try to ping the http for success
-	// repeatedly?
-	//
-	// Note that the serve call might download a binary, so it may
-	// take a few seconds..
-	for i := 0; ; i++ {
-		// limit to twenty tries, fail if we can never ensure it's
-		// working.
-		if i >= 20 {
-			return fmt.Errorf("http server failed to start in expected time")
-		}
-
-		configDir := filepath.Join(kakConfigDir, "tabnine")
-		client, err := tabnine.NewHTTPClient(configDir)
-		if err != nil {
-			return fmt.Errorf("newhttpclient: %v", err)
-		}
-
-		running, err := client.Running()
-		if err != nil {
-			return fmt.Errorf("Running: %v", err)
-		}
-
-		if running {
-			break
-		}
-
-		time.Sleep(time.Second)
 	}
 
 	return nil
